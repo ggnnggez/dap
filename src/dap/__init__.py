@@ -7,6 +7,14 @@ from dap.trace.writer import JsonlTracer
 from dap.llm.base import LLMProvider, LLMResponse, ToolCall
 from dap.llm.mock import MockLLM
 
+
+def __getattr__(name: str):
+    # Lazy import: keep litellm out of base import path so dap[core] stays light.
+    if name == "LiteLLMProvider":
+        from dap.llm.litellm_provider import LiteLLMProvider
+        return LiteLLMProvider
+    raise AttributeError(f"module 'dap' has no attribute {name!r}")
+
 __all__ = [
     "HookPoint",
     "Decision",
@@ -20,4 +28,5 @@ __all__ = [
     "LLMResponse",
     "ToolCall",
     "MockLLM",
+    "LiteLLMProvider",
 ]
