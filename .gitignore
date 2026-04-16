@@ -1,0 +1,10 @@
+docs/local/
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+traces/
+uv.lock
