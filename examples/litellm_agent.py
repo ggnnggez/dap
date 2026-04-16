@@ -1,10 +1,13 @@
 """Real-LLM demo using LiteLLM. Defaults to Claude via Anthropic.
 
-    ANTHROPIC_API_KEY=sk-ant-... .venv/bin/python examples/litellm_agent.py
+Configuration is loaded from a `.env` at the repo root (see `.env.example`).
+Env vars set in the shell still win over `.env` values.
 
-Override the model at the command line:
+    .venv/bin/python examples/litellm_agent.py
 
-    DAP_MODEL=openai/gpt-4o OPENAI_API_KEY=... .venv/bin/python examples/litellm_agent.py
+Override the model without touching .env:
+
+    DAP_MODEL=openai/gpt-4o .venv/bin/python examples/litellm_agent.py
 """
 
 from __future__ import annotations
@@ -14,9 +17,15 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from dap import AgentLoop, ConstraintRegistry, JsonlTracer, LiteLLMProvider
 from dap.constraints.builtin import InjectReminder, LoopDetector, MaxToolCalls
 from dap.runtime.tools import Tool
+
+# Load .env before any code reads os.environ. override=False means a real
+# shell env var still takes precedence — useful for one-off overrides.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
 
 
 def add(a: float, b: float) -> float:
@@ -65,7 +74,10 @@ def main() -> int:
         print(f"[skip] no API credentials for {model}; set the relevant *_API_KEY env var.")
         return 0
 
-    provider = LiteLLMProvider(model=model, temperature=0.0)
+    # No temperature kwarg: providers/models have incompatible ranges
+    # (e.g. Kimi reasoning models reject anything but temperature=1).
+    # Each provider's default is fine for this toy task.
+    provider = LiteLLMProvider(model=model)
 
     registry = ConstraintRegistry()
     registry.mount(MaxToolCalls(limit=8))
