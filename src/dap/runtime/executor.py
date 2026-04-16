@@ -31,28 +31,38 @@ class DirectExecutor:
 
 
 class SubprocessExecutor:
-    """Runs each tool call in a forked child process with a wall-clock
-    timeout and optional virtual-memory cap.
+    """Runs each tool call in a child process with a wall-clock timeout
+    and optional virtual-memory cap.
+
+    Defaults to the "spawn" multiprocessing context so behavior is identical
+    on Linux, macOS, and Windows, and the child does not silently inherit
+    parent state (open fds, loggers, threads, RNG seeds, ...). This imposes a
+    pickle-first contract rather than depending on whatever the platform
+    default happens to be.
 
     Constraints:
-      - tool.func and arguments must be picklable (top-level functions work;
-        lambdas and closures don't).
-      - Linux/macOS only: relies on multiprocessing fork and, if memory_mb
-        is set, `resource.setrlimit(RLIMIT_AS, ...)`.
-      - On timeout raises TimeoutError; on child crash or uncaught exception
-        raises RuntimeError. These propagate up to the AgentLoop's per-tool
-        try/except and become string error results the model can see.
+      - tool.func and arguments must be picklable. Top-level module
+        functions qualify; lambdas, nested functions, closures, and
+        interactive-`__main__` definitions do not. Spawn will raise at
+        start() for unpicklable inputs; the executor closes both pipe
+        ends and re-raises so callers can recover without fd leaks.
+      - memory_mb (Linux/macOS only) applies via resource.setrlimit(RLIMIT_AS)
+        inside the child.
+      - On timeout raises TimeoutError; on child crash or uncaught
+        exception raises RuntimeError. These propagate up to the
+        AgentLoop's per-tool try/except and become string error results
+        the model can see.
     """
 
     def __init__(
         self,
         timeout_s: float = 10.0,
         memory_mb: int | None = None,
-        mp_context: str | None = None,
+        mp_context: str = "spawn",
     ) -> None:
         self.timeout_s = timeout_s
         self.memory_mb = memory_mb
-        self._ctx = mp.get_context(mp_context) if mp_context else mp.get_context()
+        self._ctx = mp.get_context(mp_context)
 
     def execute(self, tool: Tool, arguments: dict) -> Any:
         parent_conn, child_conn = self._ctx.Pipe(duplex=False)
@@ -60,7 +70,15 @@ class SubprocessExecutor:
             target=_sandbox_entry,
             args=(child_conn, tool.func, arguments, self.memory_mb),
         )
-        proc.start()
+        try:
+            proc.start()
+        except BaseException:
+            # start() can fail on pickling errors (spawn), resource limits,
+            # or platform issues. Close both pipe ends before propagating
+            # so repeated failures don't exhaust fds.
+            parent_conn.close()
+            child_conn.close()
+            raise
         child_conn.close()  # only the child holds the write end now
 
         try:
