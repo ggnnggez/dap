@@ -7,14 +7,24 @@ from typing import Any
 from dap.runtime.hooks import Decision, HookPoint, StepContext
 
 
-class LoopDetector:
-    """A-type. Block a tool call if the same (name, arguments) has fired
-    `threshold` times within the most recent `window` tool calls.
+class LoopGuard:
+    """Enforce. On repeated (name, arguments), abort the run.
 
-    Block (not abort): the model gets a blocked-result message and may adapt.
+    Enforcement is runtime-level: Decision.abort terminates AgentLoop.run
+    the moment the threshold is hit. The model cannot "retry through" this
+    constraint — loop_demo's failure mode (LLM ignoring a block notification)
+    is impossible here because the loop stops before the next turn.
+
+    Use this when repeated tool calls represent a task-terminal condition.
+    For a softer, prompt-mediated variant that gives the model a chance to
+    adapt, use advise.LoopAdvisory instead (or compose both).
+
+    Parameters:
+      window    — how many recent tool calls to look back over.
+      threshold — how many matches within that window trigger abort.
     """
 
-    name = "loop_detector"
+    name = "loop_guard"
 
     def __init__(self, window: int = 5, threshold: int = 3) -> None:
         self.window = window
@@ -30,8 +40,8 @@ class LoopDetector:
         count = sum(1 for k in self._recent if k == key) + 1
         self._recent.append(key)
         if count >= self.threshold:
-            return Decision.block(
-                f"repeated call {tc.name}({tc.arguments}) hit {count}/{self.threshold} in last {self.window}"
+            return Decision.abort(
+                f"loop detected: {tc.name}({tc.arguments}) hit {count}/{self.threshold} in last {self.window}"
             )
         return Decision.allow()
 

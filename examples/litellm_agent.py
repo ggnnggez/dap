@@ -20,7 +20,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from dap import AgentLoop, ConstraintRegistry, JsonlTracer, LiteLLMProvider
-from dap.constraints.builtin import InjectReminder, LoopDetector, MaxToolCalls
+from dap.constraints.builtin.advise import InjectReminder
+from dap.constraints.builtin.enforce import LoopGuard, MaxToolCalls
 from dap.runtime.tools import Tool
 
 # Load .env before any code reads os.environ. override=False means a real
@@ -81,7 +82,7 @@ def main() -> int:
 
     registry = ConstraintRegistry()
     registry.mount(MaxToolCalls(limit=8))
-    registry.mount(LoopDetector(window=5, threshold=3))
+    registry.mount(LoopGuard(window=5, threshold=3))
     registry.mount(InjectReminder(after_step=4, reminder="Wrap up: produce the final answer now."))
 
     trace_path = Path(__file__).parent / "trace_litellm.jsonl"

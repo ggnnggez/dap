@@ -6,7 +6,12 @@ from dap.runtime.hooks import Decision, HookPoint, StepContext
 
 
 class MaxToolCalls:
-    """A-type. Abort the run once total tool calls exceed `limit`."""
+    """Enforce. Abort the run once total tool calls exceed `limit`.
+
+    Enforcement is runtime-level: Decision.abort terminates AgentLoop.run
+    regardless of what the model does next. The model cannot "retry through"
+    this constraint.
+    """
 
     name = "max_tool_calls"
 

@@ -6,9 +6,11 @@ from dap.runtime.hooks import Decision, HookPoint, StepContext
 
 
 class InjectReminder:
-    """B-type. After `after_step` steps, prepend a reminder system message
-    on every subsequent pre_llm. Demonstrates that B-type (prompt-shaping)
-    constraints fit the same hook+Decision interface as A-type.
+    """Advise. After `after_step` steps, prepend a reminder system message
+    on every subsequent pre_llm.
+
+    Enforcement is prompt-mediated: the LLM may or may not act on the
+    reminder. Use this when you want to steer, not to gate.
     """
 
     name = "inject_reminder"

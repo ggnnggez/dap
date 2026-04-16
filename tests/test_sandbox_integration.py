@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from dap import AgentLoop, ConstraintRegistry
-from dap.constraints.builtin import Sandbox
+from dap.constraints.builtin.enforce import Sandbox
 from dap.llm.mock import MockLLM, call_tool, text
 from dap.runtime.executor import DirectExecutor
 from dap.runtime.tools import Tool

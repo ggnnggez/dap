@@ -7,7 +7,11 @@ from dap.runtime.hooks import Decision, HookPoint, StepContext
 
 
 class Sandbox:
-    """A-type. Routes matching tool calls through a long-lived ToolExecutor.
+    """Enforce. Routes matching tool calls through a long-lived ToolExecutor.
+
+    Enforcement is runtime-level: the pre_tool MODIFY payload swaps the
+    executor used by the loop for this call. The model is not informed and
+    cannot opt out — execution simply happens inside the sandbox.
 
     Owning the executor on the constraint instance (not per-call) matters:
     container/VM-backed executors have expensive startup that must not be

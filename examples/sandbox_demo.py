@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 
 from dap import AgentLoop, ConstraintRegistry, JsonlTracer, MockLLM, SubprocessExecutor
-from dap.constraints.builtin import Sandbox
+from dap.constraints.builtin.enforce import Sandbox
 from dap.llm.mock import call_tool, text
 from dap.runtime.tools import Tool
 

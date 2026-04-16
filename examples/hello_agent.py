@@ -1,5 +1,11 @@
-"""Smoke demo: a scripted agent that intentionally loops, so the
-LoopDetector kicks in and InjectReminder is observed in the trace.
+"""Smoke demo: a scripted agent that intentionally loops. LoopAdvisory
+(advise-category) inserts a blocked-notification tool_result on the 3rd
+repeated call; the scripted model then 'notices' and answers. InjectReminder
+shows up in the trace on subsequent pre_llm turns.
+
+This demo picks LoopAdvisory rather than enforce.LoopGuard on purpose: the
+point is to show the prompt-mediated path working end-to-end. For the
+runtime-enforced counterpart, see loop_demo.py.
 
 Run:
     python -m examples.hello_agent
@@ -18,7 +24,8 @@ from dap import (
     JsonlTracer,
     MockLLM,
 )
-from dap.constraints.builtin import InjectReminder, LoopDetector, MaxToolCalls
+from dap.constraints.builtin.advise import InjectReminder, LoopAdvisory
+from dap.constraints.builtin.enforce import MaxToolCalls
 from dap.llm.mock import call_tool, text
 from dap.runtime.tools import Tool
 
@@ -42,19 +49,20 @@ def main() -> None:
     ]
 
     # Scripted trajectory: model insists on calling add(1,2) three times,
-    # then finally answers. LoopDetector should block the 3rd call.
+    # then finally answers. LoopAdvisory should block the 3rd call via a
+    # [blocked by loop_advisory: ...] tool_result.
     llm = MockLLM(
         script=[
             call_tool("c1", "add", a=1, b=2),
             call_tool("c2", "add", a=1, b=2),
-            call_tool("c3", "add", a=1, b=2),  # blocked
+            call_tool("c3", "add", a=1, b=2),  # blocked (prompt-mediated)
             text("the answer is 3"),
         ]
     )
 
     registry = ConstraintRegistry()
     registry.mount(MaxToolCalls(limit=10))
-    registry.mount(LoopDetector(window=5, threshold=3))
+    registry.mount(LoopAdvisory(window=5, threshold=3))
     registry.mount(InjectReminder(after_step=2, reminder="Stop repeating; produce the final answer."))
 
     trace_path = Path(__file__).parent / "trace.jsonl"
