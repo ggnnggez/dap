@@ -96,6 +96,8 @@ def _apply_modify(hook: HookPoint, ctx: StepContext, payload: Any) -> None:
     elif hook == HookPoint.PRE_TOOL:
         if "tool_call" in payload:
             ctx.tool_call = payload["tool_call"]
+        if "executor" in payload:
+            ctx.executor_override = payload["executor"]
     elif hook == HookPoint.POST_TOOL:
         if "tool_result" in payload:
             ctx.tool_result = payload["tool_result"]

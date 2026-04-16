@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dap.runtime.executor import ToolExecutor
 
 
 class HookPoint(str, Enum):
@@ -62,4 +65,5 @@ class StepContext:
     pending_tool_calls: list[Any] = field(default_factory=list)
     tool_call: Any = None
     tool_result: Any = None
+    executor_override: "ToolExecutor | None" = None
     scratch: dict[str, Any] = field(default_factory=dict)

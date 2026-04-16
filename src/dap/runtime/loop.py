@@ -5,6 +5,7 @@ from typing import Any
 
 from dap.constraints.registry import ConstraintRegistry
 from dap.llm.base import LLMProvider, LLMResponse, ToolCall
+from dap.runtime.executor import DirectExecutor, ToolExecutor
 from dap.runtime.hooks import Action, Decision, HookPoint, StepContext
 from dap.runtime.tools import Tool
 from dap.trace.events import EventKind, TraceEvent
@@ -38,6 +39,7 @@ class AgentLoop:
         registry: ConstraintRegistry | None = None,
         tracer: Tracer | None = None,
         max_steps: int = 25,
+        default_executor: ToolExecutor | None = None,
     ) -> None:
         self.llm = llm
         self.tools = {t.name: t for t in tools}
@@ -45,6 +47,7 @@ class AgentLoop:
         self.registry = registry or ConstraintRegistry()
         self.tracer = tracer or NullTracer()
         self.max_steps = max_steps
+        self.default_executor: ToolExecutor = default_executor or DirectExecutor()
         self._step_id = 0
 
     def run(self, task: str) -> RunResult:
@@ -123,12 +126,18 @@ class AgentLoop:
                     continue
                 tc = ctx.tool_call
 
+                executor = ctx.executor_override or self.default_executor
                 self._emit(
                     EventKind.TOOL_CALL,
-                    {"id": tc.id, "name": tc.name, "arguments": tc.arguments},
+                    {
+                        "id": tc.id,
+                        "name": tc.name,
+                        "arguments": tc.arguments,
+                        "executor": type(executor).__name__,
+                    },
                 )
                 try:
-                    result = self.tools[tc.name].func(**tc.arguments)
+                    result = executor.execute(self.tools[tc.name], tc.arguments)
                 except Exception as e:
                     result = f"[tool error: {type(e).__name__}: {e}]"
                 self._emit(

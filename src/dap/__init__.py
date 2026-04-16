@@ -1,5 +1,6 @@
 from dap.runtime.hooks import HookPoint, Decision, StepContext
 from dap.runtime.loop import AgentLoop
+from dap.runtime.executor import ToolExecutor, DirectExecutor, SubprocessExecutor
 from dap.constraints.base import Constraint
 from dap.constraints.registry import ConstraintRegistry
 from dap.trace.events import TraceEvent
@@ -20,6 +21,9 @@ __all__ = [
     "Decision",
     "StepContext",
     "AgentLoop",
+    "ToolExecutor",
+    "DirectExecutor",
+    "SubprocessExecutor",
     "Constraint",
     "ConstraintRegistry",
     "TraceEvent",
